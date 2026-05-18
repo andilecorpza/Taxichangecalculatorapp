@@ -7,21 +7,24 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
-    - name: Install Python
-      uses: actions/setup-python@v4
+    - name: Install Python 3.11
+      uses: actions/setup-python@v5
       with:
         python-version: '3.11'
 
-    - name: Install Buildozer & Deps
+    - name: Install Buildozer and Dependencies
       run: |
-        pip install buildozer
+        pip install --upgrade pip
+        pip install buildozer cython
         sudo apt update
-        sudo apt install -y git zip unzip openjdk-17-jdk python3-pip autoconf libtool pkg-config zlib1g-dev
+        sudo apt install -y git zip unzip openjdk-17-jdk python3-pip autoconf libtool pkg-config zlib1g-dev libncurses5 libbz2-dev libsqlite3-dev libffi-dev libssl-dev
 
     - name: Set up JDK 17
       uses: actions/setup-java@v4
@@ -32,9 +35,10 @@ jobs:
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
 
-    - name: Install Android Build Tools
-      run: sdkmanager "build-tools;34.0.0" "platform-tools"
-
-    - name: Build APK
+    - name: Accept Licenses and Install Android SDK
       run: |
-        buildozer android debug
+        yes | sdkmanager --licenses
+        sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+
+    - name: Build APK with Buildozer
+      run: buildozer android debug
