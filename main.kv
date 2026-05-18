@@ -1,0 +1,63 @@
+BoxLayout:
+    orientation: "vertical"
+    padding: 20
+    spacing: 10
+
+    canvas.before:
+        Rectangle:
+            source: "image1.png"
+            pos: self.pos
+            size: self.size
+    TextInput:
+        id: fare
+        hint_text: "Fare per person"
+        multiline: False
+        size_hint_y: None
+        height: "40dp"
+        background_color: 0, 0, 0, 0.3
+        foreground_color: 1, 1, 1, 1
+        cursor_color: 1, 1, 1, 1
+
+    TextInput:
+        id: people
+        hint_text: "Number of people"
+        multiline: False
+        size_hint_y: None
+        height: "40dp"
+        background_color: 0, 0, 0, 0.3
+        foreground_color: 1, 1, 1, 1
+        cursor_color: 1, 1, 1, 1
+
+    TextInput:
+        id: paid
+        hint_text: "Amount paid"
+        multiline: False
+        size_hint_y: None
+        height: "40dp"
+        background_color: 0, 0, 0, 0.3
+        foreground_color: 1, 1, 1, 1
+        cursor_color: 1, 1, 1, 1
+
+    Button:
+        text: "Calculate Change"
+        size_hint_y: None
+        height: "45dp"
+        on_press: app.calculate(root)
+
+    Button:
+        text: "View History"
+        size_hint_y: None
+        height: "45dp"
+        on_press: app.show_history(root)
+
+    Button:
+        text: "Clear"
+        size_hint_y: None
+        height: "45dp"
+        on_press: app.clear(root)
+
+    Label:
+        id: result
+        text: ""
+        color: 1, 1, 1, 1
+        font_size: "16sp"
