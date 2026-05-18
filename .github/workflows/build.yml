@@ -1,79 +1,77 @@
-name: Build Android APK
+name: Android Build (FULL FIX AIDL)
 
 on:
+  workflow_dispatch:
   push:
     branches: [ main ]
-  workflow_dispatch:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-    timeout-minutes: 90
+    runs-on: ubuntu-22.04
+
+    env:
+      ANDROID_HOME: $HOME/android-sdk
 
     steps:
-    - name: Checkout Repository
+    - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
+    # 🔥 Make Gradle executable
+    - name: Make gradlew executable
+      run: chmod +x gradlew
 
-    - name: Set up Java 17
+    - name: Set up Java
       uses: actions/setup-java@v4
       with:
         distribution: temurin
         java-version: 17
 
-    - name: Install system dependencies (FIX AIDL + Buildozer)
+    - name: Install required tools
       run: |
-        sudo apt update
-        sudo apt install -y \
-          git zip unzip openjdk-17-jdk \
-          python3-pip autoconf libtool pkg-config \
-          zlib1g-dev libncurses5-dev libncursesw5-dev \
-          libtinfo5 cmake libffi-dev libssl-dev \
-          build-essential libsqlite3-dev
+        sudo apt-get update
+        sudo apt-get install -y wget unzip zip
 
-    - name: Install Buildozer + Cython
+    - name: Install Android SDK (REAL AIDL FIX)
       run: |
-        pip install --upgrade pip
-        pip install buildozer cython==0.29.36
+        mkdir -p $ANDROID_HOME/cmdline-tools
 
-    - name: Install Android SDK (proper AIDL fix)
-      run: |
-        mkdir -p $HOME/android-sdk
-        export ANDROID_HOME=$HOME/android-sdk
-        export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
+        cd $HOME
+        wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O sdk.zip
+        unzip sdk.zip
 
-        wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-        unzip commandlinetools-linux-*.zip
         mkdir -p $ANDROID_HOME/cmdline-tools/latest
         mv cmdline-tools/* $ANDROID_HOME/cmdline-tools/latest/
 
+        export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
+
         yes | sdkmanager --licenses
 
+        # 🔥 CRITICAL FIX: install correct build-tools that include AIDL
         sdkmanager \
           "platform-tools" \
-          "platforms;android-34" \
-          "build-tools;34.0.0" \
-          "ndk;25.2.9519653"
+          "platforms;android-33" \
+          "build-tools;33.0.2"
 
-    - name: Fix Buildozer permissions
-      run: |
-        buildozer --version
-        mkdir -p .buildozer
+        # verify aidl exists
+        ls $ANDROID_HOME/build-tools/33.0.2/ || true
 
-    - name: Build APK
-      env:
-        ANDROIDAPI: 34
-        ANDROIDSDK: 34
-        ANDROIDNDK: 25.2.9519653
+    - name: Export Android paths
       run: |
-        buildozer android debug
+        echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
+        echo "$HOME/android-sdk/platform-tools" >> $GITHUB_PATH
+        echo "$HOME/android-sdk/build-tools/33.0.2" >> $GITHUB_PATH
+
+    # 🔥 Force Gradle to use SDK correctly
+    - name: Set local.properties
+      run: |
+        echo "sdk.dir=$ANDROID_HOME" > local.properties
+
+    # 🔥 Build APK
+    - name: Build Debug APK
+      run: ./gradlew clean assembleDebug --stacktrace
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: app-debug-apk
-        path: bin/*.apk
+        name: app-debug
+        path: app/build/outputs/apk/debug/*.apk
