@@ -1,4 +1,4 @@
-name: Android Build (FULL FIX AIDL)
+name: Build Android APK (FULL FIX)
 
 on:
   workflow_dispatch:
@@ -9,16 +9,13 @@ jobs:
   build:
     runs-on: ubuntu-22.04
 
-    env:
-      ANDROID_HOME: $HOME/android-sdk
-
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    # 🔥 Make Gradle executable
+    # 🔥 FIX GRADLEW PERMISSION
     - name: Make gradlew executable
-      run: chmod +x gradlew
+      run: chmod +x ./gradlew
 
     - name: Set up Java
       uses: actions/setup-java@v4
@@ -26,13 +23,14 @@ jobs:
         distribution: temurin
         java-version: 17
 
-    - name: Install required tools
+    - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y wget unzip zip
+        sudo apt-get install -y wget unzip
 
-    - name: Install Android SDK (REAL AIDL FIX)
+    - name: Install Android SDK (AIDL FIX)
       run: |
+        export ANDROID_HOME=$HOME/android-sdk
         mkdir -p $ANDROID_HOME/cmdline-tools
 
         cd $HOME
@@ -46,32 +44,23 @@ jobs:
 
         yes | sdkmanager --licenses
 
-        # 🔥 CRITICAL FIX: install correct build-tools that include AIDL
-        sdkmanager \
-          "platform-tools" \
-          "platforms;android-33" \
-          "build-tools;33.0.2"
+        # 🔥 THIS FIXES AIDL
+        sdkmanager "platform-tools" \
+                   "platforms;android-33" \
+                   "build-tools;33.0.2"
 
-        # verify aidl exists
-        ls $ANDROID_HOME/build-tools/33.0.2/ || true
-
-    - name: Export Android paths
+    - name: Set Android environment
       run: |
-        echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
+        echo "sdk.dir=$HOME/android-sdk" > local.properties
         echo "$HOME/android-sdk/platform-tools" >> $GITHUB_PATH
         echo "$HOME/android-sdk/build-tools/33.0.2" >> $GITHUB_PATH
 
-    # 🔥 Force Gradle to use SDK correctly
-    - name: Set local.properties
-      run: |
-        echo "sdk.dir=$ANDROID_HOME" > local.properties
-
-    # 🔥 Build APK
+    # 🔥 BUILD APK
     - name: Build Debug APK
       run: ./gradlew clean assembleDebug --stacktrace
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: app-debug
+        name: app-debug-apk
         path: app/build/outputs/apk/debug/*.apk
